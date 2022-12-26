@@ -1,16 +1,16 @@
 Below is the text for the article. There is also a code that works.
 
-# Writing Clojure script to open Docker and 2 terminal windows
+# Writing a Clojure Script to Open Docker and Two Terminal Windows
 
-If you are looking for an alternative to bash scripts, consider using Clojure for your scripting needs. While the [Babashka](https://github.com/babashka/babashka) library is a popular choice, there are other options available as well.
+If you are looking for an alternative to bash scripts and already know Clojure, consider using it for your scripting needs. While the [Babashka](https://github.com/babashka/babashka) library is a popular choice, there are other options available as well.
 
 Using the [robot](https://github.com/D00mch/robot) library, we'll demonstrate how to make a desktop script that completes the tasks listed below (which I wanted to delegate to a machine rather than performing myself):
 
-1. Start a docker process.
-2. Run a `docker-compose up` in the working directory in a terminal window;
-3. Open another terminal window with `lein repl`.
+1. Start a docker process (ensure it's running).
+2. Open a terminal window in the working directory and run: `docker-compose up`. 
+3. Open another terminal tab with `lein repl`.
 
-In other words, I want to have the running processes displayed in two terminal tabs and be sure that Docker is running.
+In other words, I want to have two running processes displayed in two terminal tabs and be sure that Docker is running.
 
 ## Preparation / Prerequisites
 
@@ -128,14 +128,21 @@ This will pause the script for 2 seconds, simulating the time it would take to s
 Next, we will open a terminal application and run the `docker-compose up` command. I am using `WezTerm` as my terminal client, but you can use any terminal application that you prefer.
 
 ```clojure
-(cmd! "open /Applications/WezTerm.app")
+(defn open-terminal! []
+  (cmd! "open /Applications/WezTerm.app"))
 ```
 
-This code will pause for 200 milliseconds, press the cmd and space keys to open the spotlight or Alfred search function, pause for 100 milliseconds, type the text "WezTerm" to search for the terminal application, and press the enter key to launch the application. Keep in mind that you will need to adjust the text that is typed and the keys that are pressed based on your specific setup and preferences.
+Or using the `robot` library:
 
 ```clojure
+(ns working.core
+  (:require
+   [clojure.tools.cli :as cli]
+   [robot.core :as robot]   ;; new one
+   [clojure.java.shell :refer [sh]])
+  (:gen-class))
+
 (defn open-terminal! []
-  (robot/sleep 200)
   (robot/hot-keys! [:cmd :space]) ;; to open spotlight or alfred
   (robot/sleep 100)
   (robot/type-text! "WezTerm")
@@ -143,7 +150,9 @@ This code will pause for 200 milliseconds, press the cmd and space keys to open 
   (robot/type! :enter))
 ```
 
-We will use the first variant of the `open-terminal!` function because it is shorter. We will also add another function to simplify the process of pasting text into the terminal:
+This code will press the cmd and space keys to open the spotlight or Alfred search function, pause for 100 milliseconds, type the text "WezTerm" to search for the terminal application, and press the enter key to launch it.
+
+To open the terminal, we will use the first variant of the `open-terminal!` function. To simplify the process of pasting text, we will add another function.
 
 ```clojure
 (defn paste! [s]
@@ -228,16 +237,66 @@ This allows me to start everything I need for my work with a single keystroke. H
 - The script may take some time to start. I think it's not critical as the task itself takes several seconds to perform, so the overall time required to complete the task may not be significantly impacted by the startup time of the script.
 - The jar file for the described script has a size of 4.8 MB, which you may consider large. This is because it includes all the necessary Java and Clojure core functions.
 
-- If the process that starts the jar we created doesn't have permissions to manipulate desctop, `robot` won't work. 
-- If we avoid using `robot/sleep` between commands, we may encounter a problem, that keys are pressed faster than the desktop UI could respond. 
-- Startup time. Not critical as the task itself is not fast.
-- Script size. Jar file will include all java and core functions. Described script has a size of 4.8 mb. 
+## How to rewrite this with pure bash
+
+To target both OSX and Linux (with Gnome Terminal support), the bash script would look something like:
+
+```bash
+#!/usr/bin/env bash
+
+# Set the terminal emulator to use (default is Terminal on macOS, Gnome Terminal on Linux)
+if [[ "$OSTYPE" == "darwin"* ]]; then
+  TERMINAL=${2:-Terminal}
+else
+  TERMINAL=${2:-gnome-terminal}
+fi
+
+# Start the docker process
+open -a Docker
+
+# Wait until docker is running
+while ! docker stats --no-stream; do
+  sleep 2
+done
+
+if [[ "$OSTYPE" == "darwin"* ]]; then
+  open -a "$TERMINAL"
+  osascript -e "tell application \"$TERMINAL\" to activate"
+  osascript -e 'tell application "System Events" to keystroke "t" using command down'
+  osascript -e "tell application \"System Events\" to keystroke \"cd $1\""
+  osascript -e 'tell application "System Events" to keystroke return'
+  osascript -e 'tell application "System Events" to keystroke "docker-compose up"'
+  osascript -e 'tell application "System Events" to keystroke return'
+else
+  $TERMINAL --tab --working-directory="$1" -e "docker-compose up"
+fi
+
+# Open another tab in the terminal emulator and run lein repl in the specified directory
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    osascript -e "tell application \"$TERMINAL\" to activate"
+    osascript -e 'tell application "System Events" to keystroke "t" using command down'
+    osascript -e "tell application \"System Events\" to keystroke \"cd $1\""
+    osascript -e 'tell application "System Events" to keystroke return'
+    osascript -e 'tell application "System Events" to keystroke "lein with-profile +test repl"'
+    osascript -e 'tell application "System Events" to keystroke return'
+else
+    $TERMINAL --tab -e "bash -c 'cd $1; lein with-profile +test repl'"
+fi
+```
 
 ## Conclusion
 
 Clojure allows us to easily write scripts to manipulate the desktop using the same keys and applications that we would use manually. You have access to a wide range of tools and libraries that make it easy to implement such scripts quickly. If you are already familiar with Clojure, you can avoid having to learn Bash and leverage your existing knowledge. 
 
-However, it is worth noting that there may be issues to consider such as startup time and script size. Regardless, using Clojure for desktop scripting can be a powerful and convenient solution.
+However, it is worth noting that there may be issues to consider such as startup time and script size. Regardless, using Clojure with `robot` for desktop scripting can be a convenient solution, that would be reusable on all systems that support Java.
+
+However, it is worth noting that there may be issues to consider, such as startup time and script size. Regardless, using Clojure with robot for desktop scripting is a convenient solution that can be reused on all systems that support Java.
+
+You may find the whole code [here](https://github.com/D00mch/working-script/blob/main/src/working/core.clj).
+
+## Credits
+
+I would like to thank OpenAI's for the assistance in generating some of the content for this article.
 
 ## License
 
