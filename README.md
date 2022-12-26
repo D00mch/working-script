@@ -215,7 +215,11 @@ Once we have built the jar file, we can bind it to a hotkey using a tool like [s
 ctrl + alt - 1 : java -jar ~/IdeaProjects/clojure/working/target/uberjar/working-0.1.0-SNAPSHOT-standalone.jar -p ~/IdeaProjects/work/server/
 ```
 
-This allows me to start everything I need for my work with a single keystroke.
+This allows me to start everything I need for my work with a single keystroke. Here is a demonstration of the script in action (when I press `ctrl+alt+1`):
+
+<p align="center">
+  <img src="https://github.com/D00mch/working-script/blob/main/resources/Screen%20Recording%202022-12-27%20at%2001.34.25.gif" width="960" height="600">
+</p>
 
 ## Possible issues to consider:
 
