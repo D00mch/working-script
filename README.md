@@ -4,13 +4,13 @@ Below is the text for the article. There is also a code that works.
 
 If you are looking for an alternative to bash scripts and already know Clojure, consider using it for your scripting needs. While the [Babashka](https://github.com/babashka/babashka) library is a popular choice, there are other options available as well.
 
-Using the [robot](https://github.com/D00mch/robot) library, we'll demonstrate how to make a desktop script that completes the tasks listed below (which I wanted to delegate to a machine rather than performing myself):
+Sometimes, we don't want to worry about the command line API. For example, to begin working on my current project, I need to do three things first. Open the Docker application and wait until it's ready. Press `cmd+space` and type "Terminal" to open a terminal emulator. Then, go to the path where the project is located with `cd <path>`. Here, I want to run `docker-compose up`. Next, I press `cmd+t` to open a new tab and run `lein repl` in it.
 
-1. Start a docker process (ensure it's running).
-2. Open a terminal window in the working directory and run: `docker-compose up`. 
-3. Open another terminal tab with `lein repl`.
+I know how to do these steps manually, but I don't know how to do it with bash. Using the [robot](https://github.com/D00mch/robot) library, we'll show you how to create a desktop script that *completes these tasks by pressing keys*. Basically, we'll implement it in three steps:
 
-In other words, I want to have two running processes displayed in two terminal tabs and be sure that Docker is running.
+1. Start a docker process (make sure it's running).
+2. Open a terminal window in the working directory and run: docker-compose up.
+3. Open another terminal tab and run lein repl.
 
 ## Preparation / Prerequisites
 
@@ -21,7 +21,7 @@ brew install leiningen
 brew install java
 ```
 
-If you have Docker installed, you can use it for the tasks in this tutorial. If not, you can simulate the work using the `Thread/sleep` function.
+If you have Docker installed, you can use it. If not, you can simulate the work using the `Thread/sleep` function.
 
 Next, we will create a project template using the following command:
 
@@ -84,6 +84,8 @@ To continue working on our script, we will start a REPL by running the following
 ```bash
 lein repl
 ```
+
+If you don't know how to make a REPL connection, consider checking out the [Clojure docs](https://clojure.org/guides/editors) on the subject. The [Show me your REPL](https://www.youtube.com/@smyr-clj/videos) video series is a good place for ideas and inspiration.
 
 After establishing a connection with the REPL, evaluate the namespace `working.core`.
 
@@ -232,6 +234,14 @@ This allows me to start everything I need for my work with a single keystroke. H
 
 ## Possible issues to consider:
 
+Pros:
+
+- This approach allows you to abstract out the low-level command line API and just emit the keys that you would press manually;
+- Everything available in the Clojure/Java ecosystem is within your reach, including REPL and all the libraries;
+- It works wherever Java works (Linux, OSX, Windows);
+
+Cons:
+
 - If the process that runs the jar file does not have sufficient permissions to manipulate the desktop, robot may not work as expected.
 - If we omit the `robot/sleep` calls between commands, we may encounter problems as the keys may be pressed faster than the desktop UI can respond.
 - The script may take some time to start. I think it's not critical as the task itself takes several seconds to perform, so the overall time required to complete the task may not be significantly impacted by the startup time of the script.
@@ -259,6 +269,7 @@ while ! docker stats --no-stream; do
   sleep 2
 done
 
+# Open $2 terminal emulator, go to $1 path, launch docker-compose
 if [[ "$OSTYPE" == "darwin"* ]]; then
   open -a "$TERMINAL"
   osascript -e "tell application \"$TERMINAL\" to activate"
